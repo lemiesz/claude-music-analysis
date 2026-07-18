@@ -1,4 +1,4 @@
-<title>Engineering a 21,000-Track Rekordbox Library</title>
+<title>Engineering a Rekordbox Library</title>
 <style>
   :root {
     --bg: #f4f5f7;
@@ -278,12 +278,12 @@
 
 <div class="wrap">
   <p class="kicker">Field report · DJ library engineering</p>
-  <h1>Organizing a 21,000-track rekordbox library with scripts, Discogs, and a neural network</h1>
-  <p class="lede">Over about a week, an unwieldy rekordbox collection — 160 playlists, thousands of untagged tracks, a 2,700-track “no category” pile — was restructured, enriched with real metadata, audio-analyzed with ML models, and wired into the hardware workflow (XDJ Track Filter, Matching, USB export). Everything was done with <strong>Python scripts against the rekordbox database directly</strong>, with Claude Code doing the heavy lifting. This is what was built and how you could build the same thing.</p>
+  <h1>Organizing an entire rekordbox library with scripts, Discogs, and a neural network</h1>
+  <p class="lede">Over about a week, an unwieldy rekordbox collection — 160 playlists, thousands of untagged tracks, a mountainous “no category” pile — was restructured, enriched with real metadata, audio-analyzed with ML models, and wired into the hardware workflow (XDJ Track Filter, Matching, USB export). Everything was done with <strong>Python scripts against the rekordbox database directly</strong>, with Claude Code doing the heavy lifting. This is what was built and how you could build the same thing.</p>
 
   <div class="stats">
-    <div class="stat"><b>21,054</b><span>tracks, zero lost</span></div>
-    <div class="stat"><b>18,859</b><span>tracks ML-analyzed</span></div>
+    <div class="stat"><b>0</b><span>tracks lost</span></div>
+    <div class="stat"><b>&lt;80 min</b><span>to ML-analyze the library</span></div>
     <div class="stat"><b>20 → 12</b><span>top-level folders</span></div>
     <div class="stat"><b>78%</b><span>Discogs match rate</span></div>
   </div>
@@ -308,7 +308,7 @@
   </ul>
 
   <h3>Safety: the rules every write script follows</h3>
-  <div class="rule-card"><b>The contract:</b> back up <code>master.db</code> automatically before touching anything · refuse to run while rekordbox is open · dry-run by default, <code>--apply</code> to commit · only ever <em>fill empty fields</em>, never overwrite existing metadata · verify track counts after every run. Final tally after ~15 write operations: 21,054 tracks in, 21,054 out, and a folder of timestamped <code>master.db.backup-*</code> files that were never needed.</div>
+  <div class="rule-card"><b>The contract:</b> back up <code>master.db</code> automatically before touching anything · refuse to run while rekordbox is open · dry-run by default, <code>--apply</code> to commit · only ever <em>fill empty fields</em>, never overwrite existing metadata · verify track counts after every run. Final tally after ~15 write operations: every track that went in came out — verified by count each time — and a folder of timestamped <code>master.db.backup-*</code> files that were never needed.</div>
   <p>Two mechanics-level gotchas worth knowing before you write anything: pyrekordbox commits land in SQLite’s write-ahead log, so run <code>PRAGMA wal_checkpoint(TRUNCATE)</code> after committing or rekordbox may read a stale tree; and always fully quit and relaunch rekordbox to see changes.</p>
 
   <h3>What the mechanics enabled first: structure</h3>
@@ -339,7 +339,7 @@
   </div></div>
 
   <h3>Discogs: the workhorse</h3>
-  <p>Discogs matches by artist/title search, upgraded to a catalog-number search whenever a <code>[CATNO]</code> appears in the title — a big accuracy win for white-label and promo material. Results: 13,703 tracks fetched, 10,659 matched (78%). Applied at confidence ≥ 0.6: <b>+6,273 genres, +7,936 labels, +4,371 years, +7,086 catalog numbers</b>. Discogs is free but hard-capped at 60 requests/min, so the full fetch ran in the background over about a day.</p>
+  <p>Discogs matches by artist/title search, upgraded to a catalog-number search whenever a <code>[CATNO]</code> appears in the title — a big accuracy win for white-label and promo material. Results: 78% of fetched tracks matched. Applied at confidence ≥ 0.6: <b>thousands of genres, labels, release years, and catalog numbers</b>, all into previously empty fields. Discogs is free but hard-capped at 60 requests/min, so the full fetch ran in the background over about a day.</p>
   <p>Every applied value is logged with track, field, value, source, and confidence — so weak fills can be found and upgraded later when a better source appears.</p>
 
   <h3>Spotify: what its API can still do (and what it can’t)</h3>
@@ -359,12 +359,12 @@
   <p>The trick that made it fast: full-file decoding was the bottleneck (~1.8 s/track), not the neural net. So each track is sampled as <b>six 15-second segments spread from 5% to 90%</b> of its length (catches both build-ups and drops), decoded with ffmpeg, run through the model in parallel across CPU cores. <b>~5.5 tracks/sec — the whole library in under 80 minutes.</b> Embeddings are stored as blobs in SQLite, so every downstream feature is free — nothing ever needs re-analyzing.</p>
   <p>The mood scores became My Tags: an <b>Energy</b> axis (warmup / groovy / driving / peak, from quartiles of the “aggressive” score — the best-spread feature) and a <b>Vibe</b> axis (happy, chill, dark, euphoric, hypnotic, melancholic, feelgood — rule combinations over the mood scores).</p>
 
-  <h3>Auto-sorting the 2,700-track “no category” pile</h3>
+  <h3>Auto-sorting the “no category” pile</h3>
   <p>The to-file pile got sorted three ways at once (add-only — originals untouched): <b>by-genre</b>, <b>by-BPM</b>, and <b>by-sound</b> — cosine k-means over the embeddings (K=26), each cluster named by its dominant <em>distinctive</em> Discogs sub-genre (cloud-rap, bassline, psy-trance, halftime…), then tempo-split into BPM leaves. The naming rule: if a cluster can be meaningfully named it gets its own folder; otherwise it folds into the nearest genre folder — no <code>hip-hop-2</code>, <code>hip-hop-3</code> junk.</p>
-  <p>A subtle fix that mattered: <b>feel-BPM</b>. Rekordbox tags half/double-time wrong constantly (cloud rap “at 140” feels like 70; some house “at 62” feels like 124). Genre-anchored folding rules corrected ~600 tracks before bucketing, and a separate script permanently halved the stored BPM where the ML tempo estimate confirmed half-time feel.</p>
+  <p>A subtle fix that mattered: <b>feel-BPM</b>. Rekordbox tags half/double-time wrong constantly (cloud rap “at 140” feels like 70; some house “at 62” feels like 124). Genre-anchored folding rules corrected hundreds of tracks before bucketing, and a separate script permanently halved the stored BPM where the ML tempo estimate confirmed half-time feel.</p>
 
   <h3>A sound map of the whole library</h3>
-  <p>The embeddings power a local <b>Dash/Plotly web app</b>: UMAP projects all 18,859 tracks onto a 2-D map, colored by genre, cluster, or mood. Click any track and you get its nearest sonic neighbors (“sounds like” list, cosine similarity) and can <b>play the audio in the browser</b>. Great for digging, finding mislabeled tracks, and sanity-checking the clusters.</p>
+  <p>The embeddings power a local <b>Dash/Plotly web app</b>: UMAP projects every analyzed track onto a 2-D map, colored by genre, cluster, or mood. Click any track and you get its nearest sonic neighbors (“sounds like” list, cosine similarity) and can <b>play the audio in the browser</b>. Great for digging, finding mislabeled tracks, and sanity-checking the clusters.</p>
 
   <h3>Building Matching — and getting it onto the players</h3>
   <p>Rekordbox’s built-in Matching (track-suggestion) feature was populated programmatically from the same embeddings: pairs with cosine similarity ≥ 0.90, BPM-compatible within 8% (1:1, 2:1 or 1:2), a bonus for Camelot-compatible keys, top 6 partners per track. The threshold matters — in this embedding space 0.85 is close to the random-pair 99th percentile and would produce millions of junk pairs.</p>

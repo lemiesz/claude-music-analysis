@@ -26,7 +26,7 @@ https://essentia.upf.edu/models.html — don't redistribute, license is CC BY-NC
   **6 × 15-second segments spread 5%–90%** through the track (catches
   build-ups AND drops), decode with ffmpeg, average the outputs.
 - Parallelize across performance cores; cap TF threads at 1/worker.
-  Throughput ≈ 5.5 tracks/sec on an M1 Pro → ~18k tracks in under 80 min.
+  Throughput ≈ 5.5 tracks/sec on an M1 Pro → a full library in under 80 min.
 - **Store the embedding** as a float32 blob in SQLite alongside the head
   outputs. Tables: `embedding(rb_id, vec)` + `feature(rb_id, source, name, value)`.
 - Audio files must be mounted (external drives!); metadata enrichment doesn't

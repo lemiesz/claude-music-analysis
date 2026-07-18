@@ -30,8 +30,8 @@ Do NOT extend halving to dnb/dubstep — 174/140 are conventional there.
 
 ## Two-level by-sound clustering with distinctive naming
 
-1. Global cosine k-means over L2-normed embeddings (K ≈ 26 for ~2.7k tracks —
-   sweep and eyeball).
+1. Global cosine k-means over L2-normed embeddings (sweep K and eyeball —
+   K ≈ 26 suited a few-thousand-track pile; scale with pile size).
 2. Name each cluster by its dominant **distinctive** sub-genre (≥ 30% share,
    ignoring generic tags like "Electronic"/"House"): cloud-rap, bassline,
    psy-trance, ambient…

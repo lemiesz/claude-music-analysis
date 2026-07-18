@@ -18,8 +18,8 @@ fetching is incremental/resumable and application is reviewable and re-runnable.
 
 - **Discogs** (the workhorse): search by artist/title; if the title contains a
   `[CATNO]`, search by catalog number instead — much more accurate for
-  white-labels/promos. Free token, hard cap 60 req/min, no paid tier. A full
-  10k+ library takes ~a day in the background.
+  white-labels/promos. Free token, hard cap 60 req/min, no paid tier. A large
+  library takes about a day in the background.
 - **Spotify**: client-credentials auth (no user login). Search `isrc:<ISRC>` for
   an exact match, then fetch artist genres + album release date.
   **The audio-features endpoint is DEAD for new apps (Nov 2024, returns 403)** —

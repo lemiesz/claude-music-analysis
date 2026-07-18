@@ -1,7 +1,7 @@
 # claude-music-analysis
 
-Tools, scripts, and Claude Code skills from a project that reorganized a
-**21,000-track rekordbox DJ library** with code: folder restructure, tag
+Tools, scripts, and Claude Code skills from a project that reorganized an
+**entire rekordbox DJ library** with code: folder restructure, tag
 scheme, Discogs/Spotify metadata enrichment, local ML audio analysis
 (embeddings + mood), clustering-based auto-sorting, a browsable sound map, and
 programmatic population of rekordbox's Matching feature all the way onto USB
@@ -103,7 +103,7 @@ Highlights:
 Every write script here backs up `master.db` first, refuses to run while
 rekordbox is open, dry-runs by default, and only fills empty fields. Keep it
 that way in anything you build on top. The original project ran ~15 write
-operations over a 21,054-track library with zero tracks lost — because of the
+operations over the full library with zero tracks lost — because of the
 contract, not luck.
 
 ## License

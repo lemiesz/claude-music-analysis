@@ -191,7 +191,8 @@ print(f"\ndeleted leaves: {deleted_detail}")
 print("labels/anjuna's tracks preserved in anjuna-hq:",
       set(song_rows.get("1219220828", [])) <= surviving_tracks)
 
-verdict = (len(errors) == 0 and len(orphaned) == 0 and lib_count == 21054)
+EXPECTED_TRACKS = None  # set to your library's pre-run track count to enable the final check
+verdict = (len(errors) == 0 and len(orphaned) == 0 and (EXPECTED_TRACKS is None or lib_count == EXPECTED_TRACKS))
 print(f"\n{'PASS ✅  no tracks lost, tree valid' if verdict else 'FAIL ❌  review errors above'}")
 
 if not APPLY:
