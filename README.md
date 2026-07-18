@@ -10,6 +10,9 @@ export drives.
 **Start with the report:** [`report/rekordbox-library-report.html`](report/rekordbox-library-report.html)
 tells the whole story — what was built, in what order, and why — plus a
 step-by-step guide to recreating it and the gotchas learned along the way.
+A rendered version is published as a Claude artifact:
+[claude.ai/code/artifact/d5db8c08-5ec5-4ce6-80f4-2796530eb4f7](https://claude.ai/code/artifact/d5db8c08-5ec5-4ce6-80f4-2796530eb4f7)
+(GitHub shows HTML as source; the artifact link renders it).
 
 ## The one-paragraph version
 
