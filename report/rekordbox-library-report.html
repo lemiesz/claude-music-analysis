@@ -1,0 +1,415 @@
+<title>Engineering a 21,000-Track Rekordbox Library</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --ink: #1c2028;
+    --muted: #59626e;
+    --line: #dcdfe4;
+    --accent: #c96f14;
+    --accent-soft: #f7e8d6;
+    --blue: #3d6fa3;
+    --blue-soft: #e3ecf5;
+    --code-bg: #eceef1;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --serif: Charter, "Bitstream Charter", Cambria, Georgia, serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161b;
+      --surface: #1c1f26;
+      --ink: #e8e9ec;
+      --muted: #99a1ad;
+      --line: #2d323c;
+      --accent: #f0a03c;
+      --accent-soft: #33291a;
+      --blue: #74a7d8;
+      --blue-soft: #1d2a38;
+      --code-bg: #23262e;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f5f7; --surface: #ffffff; --ink: #1c2028; --muted: #59626e;
+    --line: #dcdfe4; --accent: #c96f14; --accent-soft: #f7e8d6;
+    --blue: #3d6fa3; --blue-soft: #e3ecf5; --code-bg: #eceef1;
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161b; --surface: #1c1f26; --ink: #e8e9ec; --muted: #99a1ad;
+    --line: #2d323c; --accent: #f0a03c; --accent-soft: #33291a;
+    --blue: #74a7d8; --blue-soft: #1d2a38; --code-bg: #23262e;
+    color-scheme: dark;
+  }
+
+  html, body {
+    background: var(--bg) !important;
+    color: var(--ink);
+  }
+  body {
+    font-family: var(--serif);
+    line-height: 1.62;
+    font-size: 1.04rem;
+    margin: 0;
+  }
+  .wrap {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 3.5rem 1.4rem 5rem;
+  }
+
+  /* ---------- header ---------- */
+  .kicker {
+    font-family: var(--mono);
+    font-size: .72rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 1rem;
+  }
+  h1 {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: clamp(1.9rem, 5vw, 2.7rem);
+    line-height: 1.08;
+    letter-spacing: -.022em;
+    margin: 0 0 1rem;
+    text-wrap: balance;
+  }
+  .lede {
+    font-size: 1.14rem;
+    color: var(--muted);
+    margin: 0 0 2.2rem;
+    max-width: 40rem;
+  }
+  .lede strong { color: var(--ink); }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 0 0 2.4rem;
+  }
+  .stat { background: var(--surface); padding: .9rem 1rem; }
+  .stat b {
+    display: block;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+  }
+  .stat span {
+    font-family: var(--sans);
+    font-size: .76rem;
+    color: var(--muted);
+  }
+
+  /* ---------- table of contents ---------- */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1.1rem 1.3rem 1.2rem;
+    margin: 0 0 2rem;
+    font-family: var(--sans);
+  }
+  .toc-title {
+    font-family: var(--mono);
+    font-size: .7rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 .7rem;
+  }
+  .toc ol {
+    margin: 0;
+    padding-left: 1.4rem;
+    font-size: .95rem;
+  }
+  .toc li { margin-bottom: .35rem; }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .toc small { color: var(--muted); font-size: .84rem; }
+
+  /* ---------- sections ---------- */
+  h2 {
+    font-family: var(--sans);
+    font-weight: 750;
+    font-size: 1.45rem;
+    letter-spacing: -.015em;
+    line-height: 1.2;
+    margin: 3.4rem 0 .8rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--line);
+    text-wrap: balance;
+    scroll-margin-top: 1rem;
+  }
+  h2 .phase {
+    display: block;
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: .72rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: .45rem;
+  }
+  h3 {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin: 1.8rem 0 .5rem;
+  }
+  p { margin: 0 0 1rem; }
+  ul, ol { margin: 0 0 1.1rem; padding-left: 1.3rem; }
+  li { margin-bottom: .45rem; }
+  a { color: var(--blue); }
+
+  code {
+    font-family: var(--mono);
+    font-size: .84em;
+    background: var(--code-bg);
+    padding: .12em .38em;
+    border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: .9rem 1.1rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: .8rem;
+    line-height: 1.55;
+    margin: 0 0 1.2rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  .rule-card {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 6px 6px 0;
+    padding: .85rem 1.1rem;
+    margin: 1.4rem 0;
+    font-family: var(--sans);
+    font-size: .93rem;
+  }
+  .rule-card b { font-weight: 700; }
+
+  .flow {
+    overflow-x: auto;
+    margin: 1.4rem 0 1.6rem;
+  }
+  .flow-inner {
+    display: flex;
+    align-items: stretch;
+    gap: .5rem;
+    min-width: 34rem;
+    font-family: var(--sans);
+  }
+  .node {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: .7rem .85rem;
+    font-size: .8rem;
+    line-height: 1.4;
+  }
+  .node b {
+    display: block;
+    font-family: var(--mono);
+    font-size: .74rem;
+    margin-bottom: .25rem;
+    color: var(--accent);
+  }
+  .node.dest b { color: var(--blue); }
+  .arrow {
+    align-self: center;
+    color: var(--muted);
+    font-family: var(--mono);
+    flex: 0 0 auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--sans);
+    font-size: .86rem;
+    line-height: 1.45;
+  }
+  .table-wrap { overflow-x: auto; margin: 1.2rem 0 1.6rem; }
+  th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+    font-weight: 600;
+    padding: .45rem .7rem .45rem 0;
+    border-bottom: 1px solid var(--ink);
+  }
+  td {
+    padding: .5rem .7rem .5rem 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  td:first-child { font-family: var(--mono); font-size: .78rem; white-space: nowrap; }
+
+  .gotcha { margin-bottom: .9rem; }
+  .gotcha b { font-family: var(--sans); font-size: .95rem; }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--sans);
+    font-size: .8rem;
+    color: var(--muted);
+  }
+</style>
+
+<div class="wrap">
+  <p class="kicker">Field report · DJ library engineering</p>
+  <h1>Organizing a 21,000-track rekordbox library with scripts, Discogs, and a neural network</h1>
+  <p class="lede">Over about a week, an unwieldy rekordbox collection — 160 playlists, thousands of untagged tracks, a 2,700-track “no category” pile — was restructured, enriched with real metadata, audio-analyzed with ML models, and wired into the hardware workflow (XDJ Track Filter, Matching, USB export). Everything was done with <strong>Python scripts against the rekordbox database directly</strong>, with Claude Code doing the heavy lifting. This is what was built and how you could build the same thing.</p>
+
+  <div class="stats">
+    <div class="stat"><b>21,054</b><span>tracks, zero lost</span></div>
+    <div class="stat"><b>18,859</b><span>tracks ML-analyzed</span></div>
+    <div class="stat"><b>20 → 12</b><span>top-level folders</span></div>
+    <div class="stat"><b>78%</b><span>Discogs match rate</span></div>
+  </div>
+
+  <nav class="toc">
+    <p class="toc-title">Contents</p>
+    <ol>
+      <li><a href="#mechanics">Working the library with Claude</a> <small>— raw mechanics, safety &amp; backups, folders, tags, USB</small></li>
+      <li><a href="#metadata">Filling in the metadata</a> <small>— the Discogs pipeline, and what Spotify’s API can still do</small></li>
+      <li><a href="#sound">Analyzing the sound itself</a> <small>— embeddings, auto-sorting, the sound map, Matching</small></li>
+      <li><a href="#ingest">Keeping it alive</a> <small>— the incremental ingest pipeline</small></li>
+      <li><a href="#recreate">Recreating this yourself</a> <small>— checklist, hard-won gotchas, toolbox</small></li>
+    </ol>
+  </nav>
+
+  <h2 id="mechanics"><span class="phase">Part 1</span>Working the library with Claude: the raw mechanics</h2>
+  <p>Everything below rests on one fact: <b>a rekordbox library is just a database.</b> Rekordbox 6/7 stores every track, playlist, tag, comment, and BPM in an encrypted SQLite file (<code>master.db</code> under <code>~/Library/Pioneer/rekordbox</code>), and the Python library <a href="https://github.com/dylanljones/pyrekordbox">pyrekordbox</a> (≥ 0.4.4, which ships the decryption key) opens it read/write.</p>
+  <p>The working setup had two halves:</p>
+  <ul>
+    <li><b>Reading — an MCP server.</b> A small rekordbox MCP server let Claude query the library conversationally: search tracks, list playlists, inspect play history, find broken file references. All exploration and planning happened this way.</li>
+    <li><b>Writing — deterministic scripts.</b> Claude never “hand-edited” the database. Every change was a Python script it wrote, which was reviewed in dry-run mode first, then re-run with <code>--apply</code>. Scripts are idempotent, so re-running one is always safe.</li>
+  </ul>
+
+  <h3>Safety: the rules every write script follows</h3>
+  <div class="rule-card"><b>The contract:</b> back up <code>master.db</code> automatically before touching anything · refuse to run while rekordbox is open · dry-run by default, <code>--apply</code> to commit · only ever <em>fill empty fields</em>, never overwrite existing metadata · verify track counts after every run. Final tally after ~15 write operations: 21,054 tracks in, 21,054 out, and a folder of timestamped <code>master.db.backup-*</code> files that were never needed.</div>
+  <p>Two mechanics-level gotchas worth knowing before you write anything: pyrekordbox commits land in SQLite’s write-ahead log, so run <code>PRAGMA wal_checkpoint(TRUNCATE)</code> after committing or rekordbox may read a stale tree; and always fully quit and relaunch rekordbox to see changes.</p>
+
+  <h3>What the mechanics enabled first: structure</h3>
+  <p>The first project was organizational. The library went from 20 messy top-level items to 12: <b>eight genre folders</b> (house, techno, trance, dnb, bass, psy, hip-hop, disco) plus four non-genre ones (partner’s crate, gig sets, <code>_unsorted</code>, <code>_system</code>), all reparented via pyrekordbox’s <code>move_playlist</code>. The organizing philosophy:</p>
+  <ul>
+    <li><b>Folders and playlists = crates and sets.</b> Curation and order. Genre browsing, gig prep.</li>
+    <li><b>Tags and native fields = attributes.</b> Genre, label, energy, mood — things you filter by.</li>
+    <li><b>Smart playlists = the bridge.</b> Auto-built crates from tag combinations.</li>
+  </ul>
+  <p>Tags were then derived <em>from structure</em> so nothing was entered twice: a <b>Genre</b> My Tag from top-level folder membership, <b>Label</b> My Tags from the old record-label crates, <b>Energy</b> from existing energy playlists. Because CDJs don’t show My Tags everywhere, every tag is also mirrored into the Comment field as <code>#hashtags</code> — visible and searchable on any player.</p>
+  <p>One early lesson: verify before merging “duplicate” playlists. Two playlists with similar names and identical track counts shared <em>zero</em> tracks; another pair was genuinely identical. Count-match ≠ duplicate — compare track IDs.</p>
+
+  <h3>USB and hardware management is scriptable too</h3>
+  <p>The same database-first approach extends past the laptop:</p>
+  <ul>
+    <li><b>My Tag banks:</b> XDJ/CDJ hardware Track Filter only displays <b>4 My Tag banks</b>. Nine accumulated banks were consolidated down to Genre / Energy / Vibe / Label by re-parenting tag rows — track assignments follow automatically.</li>
+    <li><b>Export databases:</b> a USB stick exported from rekordbox carries its own databases (<code>exportLibrary.db</code>, and the classic <code>exportExt.pdb</code> that older players read). Both can be written directly when rekordbox’s own sync falls short — more on why in <a href="#sound">Part 3</a>.</li>
+  </ul>
+
+  <h2 id="metadata"><span class="phase">Part 2</span>Filling in the metadata: Discogs and Spotify</h2>
+  <p>Structure only helps if tracks carry data worth filtering on — and most tracks had no genre, label, or year. A pipeline (<code>analyzer.py</code>) fetches real metadata from external APIs into a <b>local SQLite cache</b> (<code>metadata.sqlite</code>), decoupling the slow network part from the database write:</p>
+  <div class="flow"><div class="flow-inner">
+    <div class="node"><b>fetch</b>Query external APIs per track. Slow, rate-limited, incremental and resumable — safe to run for days.</div>
+    <div class="arrow">→</div>
+    <div class="node"><b>metadata.sqlite</b>Local cache: matches, confidence scores, a generic <code>feature</code> table so new sources need no schema change.</div>
+    <div class="arrow">→</div>
+    <div class="node dest"><b>apply</b>Writes into rekordbox with <code>--min-confidence</code> gate, fill-empty only, full provenance log of every applied value.</div>
+  </div></div>
+
+  <h3>Discogs: the workhorse</h3>
+  <p>Discogs matches by artist/title search, upgraded to a catalog-number search whenever a <code>[CATNO]</code> appears in the title — a big accuracy win for white-label and promo material. Results: 13,703 tracks fetched, 10,659 matched (78%). Applied at confidence ≥ 0.6: <b>+6,273 genres, +7,936 labels, +4,371 years, +7,086 catalog numbers</b>. Discogs is free but hard-capped at 60 requests/min, so the full fetch ran in the background over about a day.</p>
+  <p>Every applied value is logged with track, field, value, source, and confidence — so weak fills can be found and upgraded later when a better source appears.</p>
+
+  <h3>Spotify: what its API can still do (and what it can’t)</h3>
+  <p>Spotify’s Web API is still useful for metadata, with one big caveat:</p>
+  <ul>
+    <li><b>What works:</b> search by <b>ISRC</b> — the standard recording identifier embedded in store-bought files — for an exact track match, then pull the <b>artist’s genre list</b> and the <b>release date</b>. Free client-credentials auth, no user login needed.</li>
+    <li><b>What’s gone:</b> the audio-features endpoint (energy, danceability, valence…) was deprecated for new apps in November 2024 and returns 403. The fetcher probes it once, marks it dead, and moves on. There is no hosted replacement — which is exactly why Part 3 exists.</li>
+  </ul>
+  <p>In this pipeline Spotify is a secondary source registered alongside Discogs in the same <code>SOURCES</code> table — adding a source is one function that takes a track and returns values.</p>
+
+  <h2 id="sound"><span class="phase">Part 3</span>Analyzing the sound itself: embeddings, clustering, Matching</h2>
+  <p>Text metadata tells you what a track is called; it can’t tell you what it <em>sounds like</em>. With hosted audio analysis gone, the answer was local ML, using the MTG (Universitat Pompeu Fabra) open-source models:</p>
+  <ul>
+    <li><b>discogs-effnet</b> — a CNN trained on Discogs data. Audio in, a <b>1280-dimensional embedding</b> out, plus scores for 400 sub-genres.</li>
+    <li><b>Mood heads</b> on top of the embedding: happy, sad, aggressive, relaxed, party, danceability.</li>
+  </ul>
+  <p>The trick that made it fast: full-file decoding was the bottleneck (~1.8 s/track), not the neural net. So each track is sampled as <b>six 15-second segments spread from 5% to 90%</b> of its length (catches both build-ups and drops), decoded with ffmpeg, run through the model in parallel across CPU cores. <b>~5.5 tracks/sec — the whole library in under 80 minutes.</b> Embeddings are stored as blobs in SQLite, so every downstream feature is free — nothing ever needs re-analyzing.</p>
+  <p>The mood scores became My Tags: an <b>Energy</b> axis (warmup / groovy / driving / peak, from quartiles of the “aggressive” score — the best-spread feature) and a <b>Vibe</b> axis (happy, chill, dark, euphoric, hypnotic, melancholic, feelgood — rule combinations over the mood scores).</p>
+
+  <h3>Auto-sorting the 2,700-track “no category” pile</h3>
+  <p>The to-file pile got sorted three ways at once (add-only — originals untouched): <b>by-genre</b>, <b>by-BPM</b>, and <b>by-sound</b> — cosine k-means over the embeddings (K=26), each cluster named by its dominant <em>distinctive</em> Discogs sub-genre (cloud-rap, bassline, psy-trance, halftime…), then tempo-split into BPM leaves. The naming rule: if a cluster can be meaningfully named it gets its own folder; otherwise it folds into the nearest genre folder — no <code>hip-hop-2</code>, <code>hip-hop-3</code> junk.</p>
+  <p>A subtle fix that mattered: <b>feel-BPM</b>. Rekordbox tags half/double-time wrong constantly (cloud rap “at 140” feels like 70; some house “at 62” feels like 124). Genre-anchored folding rules corrected ~600 tracks before bucketing, and a separate script permanently halved the stored BPM where the ML tempo estimate confirmed half-time feel.</p>
+
+  <h3>A sound map of the whole library</h3>
+  <p>The embeddings power a local <b>Dash/Plotly web app</b>: UMAP projects all 18,859 tracks onto a 2-D map, colored by genre, cluster, or mood. Click any track and you get its nearest sonic neighbors (“sounds like” list, cosine similarity) and can <b>play the audio in the browser</b>. Great for digging, finding mislabeled tracks, and sanity-checking the clusters.</p>
+
+  <h3>Building Matching — and getting it onto the players</h3>
+  <p>Rekordbox’s built-in Matching (track-suggestion) feature was populated programmatically from the same embeddings: pairs with cosine similarity ≥ 0.90, BPM-compatible within 8% (1:1, 2:1 or 1:2), a bonus for Camelot-compatible keys, top 6 partners per track. The threshold matters — in this embedding space 0.85 is close to the random-pair 99th percentile and would produce millions of junk pairs.</p>
+  <p>Getting those pairs onto a USB stick took the direct-write mechanics from Part 1: rekordbox’s device sync ignores Matching rows written outside its UI (its change ledger never saw them), so scripts write them straight into the stick’s own databases — <code>exportLibrary.db</code> for modern players, and the classic <code>exportExt.pdb</code> format that the XDJ-XZ actually reads (deck-verified). Both scripts run the same dry-run/backup/apply contract.</p>
+
+  <h2 id="ingest"><span class="phase">Part 4</span>Keeping it alive: the ingest pipeline</h2>
+  <p>All of the above would rot in a month if new imports needed manual care. One incremental script (<code>ingest_new_tracks.sh</code>) runs the whole chain for new tracks only: analyze the new audio (rekordbox can stay open) → dry-run → apply (embeddings, BPM half-time fix, Genre/Energy/Vibe tags, no-category buckets, Matching pairs — in that order, since tags and buckets depend on corrected BPM). Nothing is ever recomputed for old tracks, so ingesting a batch of new imports takes minutes.</p>
+
+  <h2 id="recreate"><span class="phase">Part 5</span>How to recreate this</h2>
+  <p>You don’t need every part — each stands alone. Rough order of effort-to-payoff:</p>
+  <ol>
+    <li><b>Set up access.</b> Python 3.11+, <code>pip install pyrekordbox</code> (≥ 0.4.4). Confirm you can read your library. Write a backup helper before anything else, and adopt the safety contract above verbatim.</li>
+    <li><b>Decide your structure on paper first.</b> Folders = crates, tags = attributes. Pick your top-level genre folders and your 4 My Tag banks (hardware limit!) before scripting anything.</li>
+    <li><b>Script the reorg and derived tags.</b> <code>move_playlist</code> for folders; derive Genre tags from folder membership; mirror tags into Comments as hashtags for CDJ visibility.</li>
+    <li><b>Enrich from Discogs.</b> Free API token, 60 req/min. Cache results in your own SQLite; separate fetch from apply; gate on match confidence; fill empty fields only. Add Spotify’s ISRC lookup as a second source for artist genres and release dates.</li>
+    <li><b>Audio analysis.</b> Get the free <a href="https://essentia.upf.edu/models.html">MTG essentia models</a> (discogs-effnet + mood heads). They run in plain TensorFlow — you don’t need the full essentia C++ build for inference if you replicate the mel-spectrogram frontend. Sample a few short segments per track instead of decoding whole files. Store embeddings; everything downstream is free after that.</li>
+    <li><b>Cluster, map, match.</b> scikit-learn k-means / UMAP / cosine similarity on the embeddings — this is standard Python data tooling from here.</li>
+  </ol>
+  <p>The scripts and a set of importable Claude Code skills distilled from this project live in the <code>claude-music-analysis</code> GitHub repository, alongside this report.</p>
+
+  <h3>What was learned the hard way</h3>
+  <div class="gotcha"><b>Commits land in the WAL.</b> After writing via pyrekordbox, run <code>PRAGMA wal_checkpoint(TRUNCATE)</code> or rekordbox may read a stale tree. Fully quit and relaunch rekordbox to see changes.</div>
+  <div class="gotcha"><b>Spotify’s audio-features API is gone</b> for new apps (since Nov 2024). Local models are the replacement — and they’re better, since you get raw embeddings.</div>
+  <div class="gotcha"><b>Essentia has no arm64 pip wheel.</b> On Apple Silicon, either build it from source or skip it: the TensorFlow models run fine in plain <code>pip install tensorflow</code>.</div>
+  <div class="gotcha"><b>Stored BPM lies.</b> Expect hundreds of half/double-time mistags in any big library. Cross-check against an independent tempo estimate before trusting BPM for anything.</div>
+  <div class="gotcha"><b>Device sync has a ledger.</b> Rows written to master.db outside the rekordbox UI may never reach an exported USB via incremental sync — write the export databases directly when it matters.</div>
+  <div class="gotcha"><b>Playlist merges need proof.</b> Compare actual track IDs, not names and counts.</div>
+  <div class="gotcha"><b>Keep external files mounted.</b> Audio analysis needs the actual files (here, ~90% lived on an external SSD); metadata enrichment doesn’t.</div>
+
+  <h3>The toolbox</h3>
+  <div class="table-wrap"><table>
+    <tr><th>Tool</th><th>Role</th></tr>
+    <tr><td>pyrekordbox</td><td>Read/write the encrypted rekordbox master.db from Python</td></tr>
+    <tr><td>Discogs API</td><td>Genre, label, year, catalog number (free, 60 req/min)</td></tr>
+    <tr><td>Spotify Web API</td><td>ISRC → exact track match, artist genres, release date</td></tr>
+    <tr><td>discogs-effnet (MTG)</td><td>Audio → 1280-dim embedding + 400 sub-genre scores</td></tr>
+    <tr><td>mood heads (MTG)</td><td>Embedding → happy/aggressive/relaxed/party/danceability</td></tr>
+    <tr><td>TensorFlow + ffmpeg</td><td>Run the models; fast segment decoding</td></tr>
+    <tr><td>scikit-learn / UMAP</td><td>Clustering, 2-D sound map</td></tr>
+    <tr><td>Dash / Plotly</td><td>Interactive visualizer with in-browser playback</td></tr>
+    <tr><td>SQLite</td><td>Local cache for metadata, embeddings, provenance</td></tr>
+    <tr><td>Claude Code</td><td>Wrote and iterated on all of it conversationally</td></tr>
+  </table></div>
+
+  <p>The meta-lesson: a DJ library is just a database, and once you treat it like one — with backups, dry-runs, provenance, and idempotent scripts — you can safely automate organization work that would take months by hand, and keep it automated as the library grows.</p>
+
+  <footer>Robert’s rekordbox library project · June–July 2026 · built with Claude Code + pyrekordbox</footer>
+</div>

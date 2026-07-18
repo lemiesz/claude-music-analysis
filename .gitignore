@@ -1,0 +1,22 @@
+# credentials & keys — never commit
+.discogs_token
+.spotify_creds
+.dlp_key
+scripts/.discogs_token
+scripts/.spotify_creds
+scripts/.dlp_key
+
+# local databases, caches, logs
+*.sqlite
+*.sqlite-journal
+*.log
+*.npz
+__pycache__/
+*.pyc
+
+# ML models (download from the Essentia model zoo)
+models/
+scripts/models/
+
+# rekordbox backups
+master.db.backup-*
