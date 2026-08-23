@@ -14,6 +14,14 @@ A rendered version is published as a Claude artifact:
 [claude.ai/code/artifact/d5db8c08-5ec5-4ce6-80f4-2796530eb4f7](https://claude.ai/code/artifact/d5db8c08-5ec5-4ce6-80f4-2796530eb4f7)
 (GitHub shows HTML as source; the artifact link renders it).
 
+## Briefs
+
+- [`docs/energy-scale-brief.md`](docs/energy-scale-brief.md) — **Measuring "energy" two
+  ways.** Why loudness and mood classifiers both fail as energy measures, how to define
+  one from DSP instead, and how the same quantity turns out to be a *diagonal direction*
+  through the 1280-dim embedding — one that the 2D sound map largely throws away. The two
+  independent methods agree at Spearman 0.843, which is what makes either trustworthy.
+
 ## The one-paragraph version
 
 A rekordbox library is just a database. `pyrekordbox` (≥ 0.4.4) opens the
@@ -29,6 +37,7 @@ map, and auto-generated Matching suggestions on the players themselves.
 
 ```
 report/     The full write-up (self-contained HTML — open in a browser)
+docs/       Focused technical briefs on individual problems
 skills/     Claude Code agent skills distilled from this project (see below)
 scripts/    Reference implementations (Python + zsh)
 ```
@@ -53,6 +62,7 @@ cp -r skills/* /path/to/your/project/.claude/skills/
 | `rekordbox-embedding-clustering` | Feel-BPM folding, 2-level cosine k-means, the "meaningfully nameable → own folder" rule, the UMAP sound map. |
 | `rekordbox-matching-usb` | Building Matching pairs from embeddings and writing USB export DBs directly when device sync won't. |
 | `rekordbox-ingest-pipeline` | The incremental ingest chain for new imports — correct ordering, frozen clusters, no recomputation. |
+| `rekordbox-energy-scale` | A relative 1–10 energy scale from loudness-invariant DSP — why loudness and mood classifiers both fail, and how to validate without ground truth. |
 
 ## The scripts
 
