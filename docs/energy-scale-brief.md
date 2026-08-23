@@ -176,7 +176,24 @@ You do not need to analyze the audio files again. The system keeps `onset_rate` 
 tempo as two different values. Thus you can calculate `onsets_per_beat` again at any
 time.
 
-## 7. What Is Still Open
+## 7. How to Test a Music Type Without a Circular Argument
+
+Method 2 learns the direction from the values of Method 1. Thus the two methods must
+agree. You cannot use this agreement to test one music type.
+
+There is a better test. Remove one music type from the data. Then find the direction
+again. The new direction does not know that music type. Then use the new direction to
+calculate a value for it.
+
+We did this test for each music type. The largest difference was 0.041 in percentile.
+For one music type, the mean value from Method 1 was 0.752. The new direction gave
+0.776. The direction did not see this music type in its data. But it gave almost the
+same result.
+
+This test shows that Method 1 does not give too much energy to one music type. Use this
+test when you must examine a group of tracks.
+
+## 8. What Is Still Open
 
 The order of the tracks in each music type is correct. In drum-and-bass, the quiet
 tracks get a low value and the loud tracks get a high value. In disco, the result is
