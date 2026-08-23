@@ -1,136 +1,167 @@
-# Measuring "energy" two ways: DSP, and a diagonal through embedding space
+# How to Measure the Energy of a Track: Two Methods
 
-A DJ library needs a **relative energy scale** — rank any track, or any playlist,
-from 1 to 10 on one consistent axis. This brief describes two independent ways we
-computed it, and why the fact that they agree is the most useful result.
+*This document uses Simplified Technical English (ASD-STE100).*
 
-## Why the obvious approaches fail
+## 1. Purpose
 
-**Loudness is not energy.** The first attempt used raw RMS over a fixed 30–120s
-window. RMS measures the *mastering engineer*: a loud modern master beats a quiet
-older one regardless of the music. The failure is measurable — that feature places
-**16.9% of duplicate pairs (the same song, two files) more than two deciles apart**.
+A DJ library needs an energy value for each track. The value must be relative. You
+must be able to put the full library in order from 1 to 10. You must also be able to
+put one playlist in order in the same way.
 
-**Mood classifiers are not energy.** The second attempt thresholded an Essentia
-`mood_aggressive` model. That detects harsh *timbre*, so it inverted whole genres:
-drum & bass came out **66% "warmup"**, disco 83%, while psytrance was 47% "peak".
+This document gives two methods. The first method measures the energy from the audio
+signal. The second method finds the energy as a direction in an embedding. The two
+methods agree with each other. This agreement is the most important result.
 
-**And there is no ground truth to learn from.** Two candidate label sources were
-tested and both were dead ends. Hand-looking "curated" energy tags turned out to be
-derived from genre-specific playlists, so a model trained on them learns *subgenre*,
-not energy. And play-position within recorded DJ sets correlates only 0.02–0.05 with
-every candidate feature, with the sign flipping between genres — real sets are not
-strictly energy-ramped.
+## 2. Why the Simple Methods Are Not Correct
 
-No ground truth means energy must be **defined**, not learned. Every component has to
-be a named, signed, inspectable number.
+### 2.1 Loudness Is Not Energy
 
-## Method 1 — measure it directly (DSP)
+The first method calculated the RMS value of the audio signal. It used only one part
+of each track, from 30 seconds to 120 seconds.
 
-Decode each track, then compute explicit acoustic quantities. Three rules do the heavy
-lifting:
+The RMS value shows the master level of the audio file. A loud master gives a high
+value. A quiet master gives a low value. The music has only a small effect.
 
-1. **Divide every track by its own RMS before measuring.** Master gain cancels out, so
-   what remains is arrangement density and spectral balance rather than mastering level.
-2. **Analyse the whole track**, not a fixed window that often lands on an intro.
-3. **Summarise at percentiles, not means**, so a long ambient intro cannot drag down a
-   banger.
+A test shows this fault. Some tracks are in the library two times, as two different
+files. The two files must get the same energy value. But this method puts 16.9 percent
+of these pairs more than two deciles apart.
 
-The resulting numbers are pooled into four groups, each re-standardised before weighting:
+### 2.2 A Mood Model Is Not Energy
 
-| group | what it captures |
+The second method used a value from a mood model. The name of the value is
+`mood_aggressive`. The model finds a hard tone. It does not find energy.
+
+Thus the result was not correct for full music types. The model put 66 percent of the
+drum-and-bass tracks in the lowest group. It put 83 percent of the disco tracks in the
+lowest group. But it put 47 percent of the psytrance tracks in the highest group.
+
+### 2.3 There Is No Correct Data to Learn From
+
+We tested two sets of labels. Neither set was usable.
+
+The first set came from playlists with energy names. But these playlists contain only
+one music type. A model that learns from them learns the music type. It does not learn
+the energy.
+
+The second set came from the play order in recorded DJ sets. The correlation with each
+feature is between 0.02 and 0.05. The sign also changes between music types. Real DJ
+sets do not increase in energy at a constant rate.
+
+Thus you cannot learn the energy from data. You must define the energy. Each part of
+the definition must have a name and a sign. You must be able to examine each part.
+
+## 3. Method 1: Measure the Audio Signal
+
+Decode each audio file. Then calculate the acoustic values. Three rules are important:
+
+1. Divide each track by its own RMS value before you measure it. This removes the
+   master level. The result then shows the density and the spectral balance.
+2. Analyze the full track. Do not analyze only one part of it.
+3. Use percentiles. Do not use mean values. A quiet start must not decrease the value
+   of a loud track.
+
+Put the values into four groups. The table shows the groups.
+
+| Group | What it measures |
 |---|---|
-| drive | rhythmic density per beat, beat-locked envelope pulse ("pump") |
-| weight | low-end share, presence/hats share |
-| full | how much of the track runs at full tilt; *minus* crest factor and dynamic range |
-| percept | Essentia mood models — deliberately the smallest weight |
+| drive | The number of onsets in each beat, and the pulse at the beat rate |
+| weight | The low-frequency part and the high-frequency part of the signal |
+| full | How much of the track stays at a high level, minus the crest factor and the dynamic range |
+| percept | The values from the mood models. This group has the smallest weight. |
 
-Re-standardising each group before weighting is load-bearing. Without it the weights are
-fiction: the Essentia features all move together, so at a nominal 0.25 weight that group
-exerted **+0.727** influence on the final score. After tuning, the four groups land at
-+0.68 / +0.65 / +0.60 / +0.59 — balanced, with no component above +0.56.
+You must standardize each group before you apply the weight of the group. If you do
+not do this, the weights are not correct. The mood values increase and decrease
+together. Thus that group controlled +0.727 of the result at a weight of only 0.25.
 
-Result: duplicate pairs now differ by a mean of **0.041** in percentile (versus 0.112 for
-raw RMS), and correlation with BPM stays at **−0.05** — energy is not a tempo proxy.
+After the correction, the four groups give +0.68, +0.65, +0.60 and +0.59. No single
+value gives more than +0.56.
 
-## Method 2 — find it as a direction in the embedding
+The test results are good. The duplicate pairs now differ by 0.041 (mean, in
+percentile). The RMS method gives 0.112. The correlation with the tempo is -0.05. Thus
+the energy value is not a tempo value.
 
-Separately, every track already has a **1280-dimensional embedding** from a neural audio
-model, used for similarity search. The question: is energy in there?
+## 4. Method 2: Find a Direction in the Embedding
 
-**It is — but not as a dimension. As a direction.**
+Each track also has an embedding. The embedding has 1280 dimensions. A neural network
+makes it. The system uses it to find tracks that sound the same.
 
-The distinction is the crux. Think of a cloud of points in ordinary 3D space where each
-point has a temperature. There may be no axis called "temperature" — but temperature might
-still rise steadily as you move along the diagonal `0.3·x + 0.7·y − 0.2·z`. Nothing is
-labelled; the information lives in a *combination* of coordinates.
+The energy is in the embedding. But the energy is not one dimension. The energy is a
+direction.
 
-Same here, with 1280 coordinates instead of 3. To find the direction we solve for a weight
-vector **w** (one weight per dimension) such that the projection `w · x` best reproduces the
-DSP energy scores — an ordinary ridge regression. Projecting a track onto **w** then yields
-its energy.
+### 4.1 A Dimension and a Direction Are Different
 
-That direction predicts the DSP score at **held-out Spearman 0.843**.
+Look at a group of points in a usual space of three dimensions. Each point has a
+temperature. No axis shows the temperature. But the temperature can increase when you
+move along the direction `0.3x + 0.7y - 0.2z`. The information is in a combination of
+the axes. No single axis holds it.
 
-And it is genuinely diagonal. If energy were a dominant, tidy axis, one principal component
-would carry it. Instead it is smeared:
+The embedding is the same. But it has 1280 axes and not three.
 
-| component | correlation with energy | share of embedding variance |
+### 4.2 How to Find the Direction
+
+Find a set of weights. There is one weight for each dimension. Call this set `w`.
+Multiply each track by `w`. The result must agree with the energy value from Method 1.
+A ridge regression finds `w`.
+
+This direction gives a held-out Spearman correlation of 0.843.
+
+The direction is diagonal. If the energy were one clear axis, one principal component
+would show it. But many components hold a part of it:
+
+| Component | Correlation with the energy | Part of the total variance |
 |---|---|---|
 | PC1 | +0.403 | 16.0% |
 | PC4 | +0.335 | 5.4% |
-| PC3 | −0.276 | 6.3% |
+| PC3 | -0.276 | 6.3% |
 | PC2 | +0.212 | 8.9% |
 
-### Why the 2D map hides it
+### 4.3 The Two-Dimensional Map Removes the Energy
 
-The browsable sound map projects those 1280 dimensions to 2D with UMAP. Measuring the same
-energy direction *after* projection:
+The sound map shows the 1280 dimensions in two dimensions. UMAP makes this map. Measure
+the same energy direction after UMAP:
 
 ```
-full 1280-dim   rho = 0.843
-UMAP 3D         rho = 0.539
-UMAP 2D         rho = 0.468
+1280 dimensions   rho = 0.843
+UMAP 3D           rho = 0.539
+UMAP 2D           rho = 0.468
 ```
 
-Flattening to 2D discards roughly **45%** of the recoverable energy ordering. This is not a
-bug in UMAP — it optimises for preserving *local neighbourhoods*, and it spends its two
-output dimensions on the highest-variance structure (broadly, genre and timbre). A
-low-variance diagonal like energy is exactly what gets sacrificed. The information was never
-in one of the axes you can see, so squashing the space destroys it.
+The two-dimensional map loses approximately 45 percent of the energy order. This is not
+a fault in UMAP. UMAP keeps the local groups of points. It uses its two output
+dimensions for the largest differences, which are the music type and the tone. The
+energy direction is diagonal and small. Thus UMAP removes it.
 
-A useful corollary: **embedding proximity does not imply similar energy.** Beyond
-near-duplicates, the mean energy difference between a track and its nearest neighbours
-flattens out and stops improving. Energy is largely *orthogonal* to embedding **distance**
-while remaining linearly decodable from embedding **position**.
+Note this result: two tracks that are near each other do not always have the same
+energy. The energy is almost independent of the distance in the embedding. But you can
+still calculate the energy from the position in the embedding.
 
-## Why two methods matter
+## 5. Why Two Methods Are Better Than One
 
-The DSP composite is computed from raw audio with no knowledge of the embedding. The
-embedding comes from an entirely separate neural model. They agree at 0.843.
+Method 1 uses only the audio signal. It does not use the embedding. A different neural
+network makes the embedding. The two methods agree at 0.843.
 
-That is **cross-validation, not circularity**. If the DSP composite were largely measurement
-noise, no direction in the embedding could recover it. And notably, the old raw-RMS feature
-would *fail* this test, because mastering loudness is not recoverable from a timbre
-embedding — the embedding does not encode how loud someone mastered the record.
+Thus the agreement is a true test. It is not a circular argument. If Method 1 gave only
+noise, no direction in the embedding could find it. The old RMS method would fail this
+test. The embedding does not hold the master level of an audio file.
 
-Three practical uses follow:
+There are three uses:
 
-1. **Confidence.** Two independent measurements agreeing is stronger evidence than either alone.
-2. **Coverage.** Tracks whose audio files are missing can never get DSP features, but many
-   still have embeddings — projecting onto **w** gives them a defensible imputed score.
-3. **A visible energy axis.** The sound map can project onto **w** directly, surfacing
-   structure the 2D layout currently throws away.
+1. **Confidence.** Two independent methods that agree give better evidence than one
+   method.
+2. **Full coverage.** Some audio files are not available. You cannot calculate Method 1
+   for these tracks. But many of them have an embedding. Use `w` to calculate an energy
+   value for them.
+3. **A visible energy axis.** The sound map can show the direction `w`. The map then
+   shows the energy, which the two-dimensional layout usually removes.
 
-## What is still unsolved
+## 6. Known Limitation
 
-The composite systematically favours sustained four-on-floor material and ranks
-breakbeat-driven material low — drum & bass lands well below where a DJ would put it. The
-cause is identifiable: the `full` group rewards continuous, compressed, wall-of-sound
-production and penalises tracks built around space and contrast. That is a *production-style*
-axis leaking into what is supposed to be an energy axis — a subtler version of the same
-mistake raw RMS makes.
+The energy value is high for tracks with a continuous beat and a high compression. The
+energy value is low for tracks with more space between the sounds. The `full` group
+causes this. That group gives a high value to continuous and compressed music.
 
-Fixing it honestly requires either genre-relative normalisation, or a real ground truth
-built by labelling a stratified sample across genres rather than reusing playlists that
-happen to have energy-sounding names.
+This is a production style. It is not the energy. To correct this, do one of these two
+tasks:
+
+- Calculate the percentiles in each music type, and not in the full library.
+- Make a correct set of labels. Use a sample of tracks from all music types.
