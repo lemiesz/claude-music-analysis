@@ -45,8 +45,22 @@ it measures the mastering, not the music, and often lands on an intro. Measured:
 ```
 ffmpeg -> numpy, **no librosa** (the old `~/.rbx-audio` py3.12 venv is gone;
 `~/.rekordbox-venv` has numpy and is all this needs). Writes `source='dsp2'` into
-`energy_features.sqlite`. Incremental — re-running skips finished ids. ~0.50s/track with 6 workers. **I/O-bound on the T7 over USB, not
-CPU-bound** (worker CPU 3-34%), so more workers/faster maths buys little.
+`energy_features.sqlite`. Incremental — re-running skips finished ids. ~0.50s/track with 6 workers.
+
+**Profiling (measured; corrects an earlier assumption that this is I/O-bound).**
+Single-threaded the split is decode 55% / compute 45%. With 6 workers the observed rate
+barely improved on the single-threaded per-track time — parallel efficiency of roughly
+18%. The cause is memory bandwidth, not disk: the framing step materialises a ~212 MB
+index array per track per worker, and on Apple Silicon every core shares one memory
+controller. Measured findings, in order of value:
+1. Replace fancy-index framing with `np.lib.stride_tricks.sliding_window_view` —
+   **3.23x faster** single-threaded, and it removes the large allocation entirely, so
+   parallel scaling should gain more than that figure suggests.
+2. Do **not** raise worker count. Decode measured 0.117 s/track at 6 workers, 0.239 at
+   10, 0.287 at 16 — an external USB SSD degrades under concurrent random access.
+3. Do **not** use Apple's AudioToolbox decoder (`-c:a mp3_at`): measured **34% slower**
+   than ffmpeg's software path, which is already NEON-optimised.
+4. No precision win available — numpy already returns complex64 from float32 input.
 
 Three design rules that matter:
 1. **Each track is divided by its own RMS before measurement** — master gain cancels,
