@@ -67,6 +67,25 @@ def load():
             "SELECT rb_id,name,num FROM feature WHERE source='essentia_ml'"):
         if n in ("mood_aggressive","mood_party","energy","mood_relaxed"):
             f[rb]["ml_" + n.replace("mood_","")] = v
+    # onsets_per_beat as stored is CORRUPTED by the BPM labelling convention: a
+    # track filed at 87 instead of 174 gets double the apparent density. Measured
+    # 2026-08-23 within dnb: halftime-filed tracks averaged decile 7.39 vs 3.12 for
+    # full-tempo ones, an onsets_per_beat ratio of 1.82x (~the 2x of a pure
+    # artefact). Recompute it here from onset_rate against a CANONICAL tempo
+    # octave, folded into [90, 180). No re-extraction needed.
+    try:
+        from pyrekordbox import Rekordbox6Database
+        from pyrekordbox.db6 import tables as _t
+        _db = Rekordbox6Database()
+        for _c in _db.query(_t.DjmdContent).filter(_t.DjmdContent.rb_local_deleted == 0).all():
+            rb = str(_c.ID)
+            if rb in f and _c.BPM and f[rb].get("onset_rate"):
+                b = _c.BPM / 100.0
+                while b < 90:  b *= 2
+                while b >= 180: b /= 2
+                f[rb]["onsets_per_beat"] = f[rb]["onset_rate"] * 60.0 / b
+    except Exception as e:
+        print("WARNING: canonical-BPM recompute unavailable, using stored value:", e)
     need = list(COMPONENTS)
     ids = [i for i in f if all(isinstance(f[i].get(k),(int,float)) and np.isfinite(f[i][k]) for k in need)]
     X = np.column_stack([[f[i][k] for i in ids] for k in need])

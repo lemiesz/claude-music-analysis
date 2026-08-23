@@ -154,14 +154,42 @@ There are three uses:
 3. **A visible energy axis.** The sound map can show the direction `w`. The map then
    shows the energy, which the two-dimensional layout usually removes.
 
-## 6. Known Limitation
+## 6. A Fault That We Found and Corrected
 
-The energy value is high for tracks with a continuous beat and a high compression. The
-energy value is low for tracks with more space between the sounds. The `full` group
-causes this. That group gives a high value to continuous and compressed music.
+The value `onsets_per_beat` divides the number of onsets by the number of beats. Thus
+it uses the tempo. But a library can hold the same tempo in two ways. It can hold a
+fast track at its full tempo. It can also hold the same track at one half of that
+tempo.
 
-This is a production style. It is not the energy. To correct this, do one of these two
-tasks:
+This gave incorrect results. A track at one half of the tempo got two times too many
+onsets in each beat. Then it got too much energy.
 
-- Calculate the percentiles in each music type, and not in the full library.
-- Make a correct set of labels. Use a sample of tracks from all music types.
+The measurement shows the size of the fault. In one music type, the tracks at one half
+of the tempo got a mean decile of 7.39. The same music at the full tempo got 3.41. The
+ratio of `onsets_per_beat` was 1.82. A ratio of 2.00 is the ratio of a pure fault.
+
+The correction is easy. Change the tempo to a standard range before you divide. Use the
+range from 90 to 180. Multiply or divide the tempo by 2 until it is in this range. The
+difference then decreases from 4.27 deciles to 1.28 deciles.
+
+You do not need to analyze the audio files again. The system keeps `onset_rate` and the
+tempo as two different values. Thus you can calculate `onsets_per_beat` again at any
+time.
+
+## 7. What Is Still Open
+
+The order of the tracks in each music type is correct. In drum-and-bass, the quiet
+tracks get a low value and the loud tracks get a high value. In disco, the result is
+the same.
+
+But one question stays open. A fast but quiet track can get a lower value than a slow
+but loud track. This is correct for the audio signal. But a DJ can have a different
+opinion.
+
+You have two possible answers:
+
+- Keep one scale for the full library. Accept that some music types stay low.
+- Calculate the percentiles in each music type. Each type then uses the full range from
+  1 to 10.
+
+This is a decision about the use of the data. It is not a fault in the measurement.
