@@ -21,8 +21,8 @@ The common view says: a feature is a column in a table. The tempo is a
 column. The year is a column. One number, one slot, one meaning.
 
 The second view says: a feature is a direction in a space. To read the
-feature of a point, you project the point onto the direction. The projection
-is a weighted sum of all the coordinates. The weights are the direction.
+feature of a point, you [project](https://en.wikipedia.org/wiki/Projection_(linear_algebra)) the point onto the direction. The projection
+is a [weighted sum](https://en.wikipedia.org/wiki/Dot_product) of all the coordinates. The weights are the direction.
 
 The first view is a special case of the second view. A column is a direction
 that has one weight equal to 1 and all other weights equal to 0. The space
@@ -75,6 +75,11 @@ The projection recovers the energy exactly. The large cause `g` cancels. The
 small cause `e` remains. No axis held the energy. The pair of axes held it
 together, as a difference.
 
+![Two panels. Left: the tracks lie along the diagonal music-type direction, and their energy color looks random along both axes. Right: after projection onto the direction w, the position equals the energy exactly.](img/fig1-mechanism.svg)
+
+*Figure 1. The example of Section 3, drawn. In panel A, no axis sorts the
+color. In panel B, the projection onto `w = (1, -1)` sorts it exactly.*
+
 This is the full mechanism in two dimensions. The embedding does the same
 thing in 1280 dimensions. The directions are not clean like `(+1, -1)`, and
 the causes do not cancel exactly. But the principle is identical: the feature
@@ -82,24 +87,29 @@ lives in a combination, and a projection reads it out.
 
 ## 4. The Real Case: 1280 Dimensions
 
-The library embedding has 1280 dimensions. A neural network makes it. The
+The library [embedding](https://en.wikipedia.org/wiki/Embedding_(machine_learning)) has 1280 dimensions. A [neural network](https://en.wikipedia.org/wiki/Artificial_neural_network) makes it. The
 network learned to identify music types. Nobody trained it to measure energy.
 
-But the energy is readable in its space. A ridge regression found a direction
+But the energy is readable in its space. A [ridge regression](https://en.wikipedia.org/wiki/Ridge_regression) found a direction
 `w`. The projection onto `w` agrees with the acoustic energy of Method 1 at a
-held-out Spearman correlation of 0.843.
+held-out [Spearman correlation](https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient) of 0.843.
 
-The direction is diagonal. The principal components show this. A principal
+The direction is diagonal. The [principal components](https://en.wikipedia.org/wiki/Principal_component_analysis) show this. A principal
 component is the axis with the largest spread, then the next largest, and so
 on. If the energy were a clean axis, one component would hold it. Instead,
 many components each hold a part:
 
-| Component | Correlation with the energy | Part of the total variance |
+| Component | Correlation with the energy | Part of the [total variance](https://en.wikipedia.org/wiki/Variance) |
 |---|---|---|
 | PC1 | +0.403 | 16.0% |
 | PC4 | +0.335 | 5.4% |
 | PC3 | -0.276 | 6.3% |
 | PC2 | +0.212 | 8.9% |
+
+![Bar chart: PC2 0.212, PC3 0.276, PC4 0.335, PC1 0.403, and the full 1280-dimensional direction w at 0.843.](img/fig2-parts-vs-whole.svg)
+
+*Figure 2. The parts and the whole. Each principal component holds a piece
+of the energy. The full direction holds much more than any piece.*
 
 Even the best component holds less than half of the signal. The full
 direction across all 1280 dimensions holds 0.843. The whole is much more than
@@ -116,7 +126,7 @@ The solution is to share. Each dimension takes part in many properties. Each
 property spreads across many dimensions. This works because a later stage can
 always read a property back with a weighted sum. Storage as a pattern costs
 nothing when the reader is a projection. The standard name for this is a
-*distributed representation*.
+[*distributed representation*](https://en.wikipedia.org/wiki/Distributed_representation).
 
 There is also a standard name for the reader. A small linear model that reads
 a property out of a space is a *linear probe*. The ridge regression of the
@@ -135,11 +145,16 @@ distance in the embedding. A neighbor list answers "what sounds the same".
 It does not answer "what has the same energy". Different questions read
 different directions.
 
-**A map can destroy a direction.** The 2D sound map keeps the large
+**A map can destroy a direction.** The 2D sound map ([UMAP](https://en.wikipedia.org/wiki/Nonlinear_dimensionality_reduction)) keeps the large
 directions and drops the small ones. The energy direction is small and
 diagonal, so the map drops much of it. The measurement: the direction reads
 at 0.843 in the full space, 0.539 after UMAP to 3D, and 0.468 after UMAP to
 2D. The feature did not go away. The projection that could read it went away.
+
+![Bar chart: the energy direction reads at rho 0.843 in the full space, 0.539 after UMAP to 3D, and 0.468 after UMAP to 2D.](img/fig3-map-loses-direction.svg)
+
+*Figure 3. Each projection to fewer dimensions makes the energy direction
+harder to read. The 2D map keeps only 0.468 of the 0.843.*
 
 **One space, many features.** Nothing limits the space to one readable
 direction. A different weight set `w2` could read a different property from
