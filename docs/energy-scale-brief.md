@@ -97,6 +97,9 @@ the axes. No single axis holds it.
 
 The embedding is the same. But it has 1280 axes and not three.
 
+A separate document explores this idea in full, with a worked example:
+see `directions-not-dimensions.md`.
+
 ### 4.2 How to Find the Direction
 
 Find a set of weights. There is one weight for each dimension. Call this set `w`.
