@@ -111,6 +111,10 @@ many components each hold a part:
 *Figure 2. The parts and the whole. Each principal component holds a piece
 of the energy. The full direction holds much more than any piece.*
 
+These four components are the four with the largest spread. The table puts
+them in the order of their correlation with the energy, not in the order of
+their spread. We did not select them because of the energy.
+
 Even the best component holds less than half of the signal. The full
 direction across all 1280 dimensions holds 0.843. The whole is much more than
 each part. That is the signature of a distributed feature.
@@ -163,14 +167,117 @@ medium. A feature is a question that you ask with a projection, not a thing
 that sits in a slot.
 
 **A subset also works.** The idea does not need all 1280 dimensions. Any
-subspace that contains enough of the direction can answer the question. This
+subspace that *retains* enough of the direction can answer the question. A
+subspace either contains a direction or does not contain it, so "retains" is
+the correct word: what changes by degree is how much of the direction stays
+after the projection. Section 7 gives the measure and the numbers. This
 is why the four acoustic groups of Method 1 also work: drive, weight, and
 fullness are each weak alone (no single value above +0.56), but their
 weighted sum tracks the same energy. Method 1 and Method 2 are the same
 mechanism at two scales. Both read a diagonal feature out of a space with a
 weighted sum.
 
-## 7. Summary
+## 7. What a Subspace Holds
+
+Section 6 says that a subset of the dimensions can answer the question. This
+section shows what that means, and what it does not mean.
+
+Take a set of directions. All the weighted sums of those directions make a
+[*linear subspace*](https://en.wikipedia.org/wiki/Linear_subspace). A subspace
+is a flat space inside the larger space. It goes through the origin. This
+report uses two kinds:
+
+- Keep a subset of the coordinates. The result is a *coordinate subspace*. The
+  four acoustic groups of Method 1 are an example.
+- Keep the span of the first four principal components. The result is a linear
+  subspace with four dimensions. It is flat, but it is not parallel to the
+  original axes.
+
+A direction is not a subspace by itself. A direction is one arrow. The
+subspace is the flat space that a set of arrows makes.
+
+### 7.1 The Best Direction Inside the Subspace
+
+Principal components do not correlate with each other. Because of this, we can
+calculate the best direction in the span of PC1 to PC4 from the table of
+Section 4. Write the four correlations as a list `r`:
+
+```
+r = (+0.403, +0.212, -0.276, +0.335)
+```
+
+The best direction is `r` divided by its own length. The correlation that this
+direction gets is the length of `r`:
+
+```
+sqrt(0.403^2 + 0.212^2 + 0.276^2 + 0.335^2) = 0.629
+```
+
+These are the weights of that direction:
+
+| Component | Correlation with the energy | Weight in the best direction |
+|---|---|---|
+| PC1 | +0.403 | +0.641 |
+| PC2 | +0.212 | +0.337 |
+| PC3 | -0.276 | -0.439 |
+| PC4 | +0.335 | +0.533 |
+
+Now put the numbers together:
+
+- A direction taken at random in the subspace gets approximately 0.31.
+- The best single component, PC1, gets 0.403.
+- The best direction in the four-dimensional subspace gets 0.629.
+- The full direction in all 1280 dimensions gets 0.843.
+
+![Bar chart: a random direction in the 4D subspace 0.31, the best single component PC1 0.403, the best direction in the span of PC1 to PC4 0.629, and the full 1280-dimensional direction w 0.843.](img/fig4-subspace-ladder.svg)
+
+*Figure 4. A subspace does much better than its best axis. It does not do as
+well as the full space.*
+
+The gap between 0.629 and 0.843 comes from the other 1276 components. The
+energy is not only in the large components. This is one more reason why a map
+that keeps the large directions loses so much of it.
+
+Be careful with the scale of the 0.629. This number comes from the algebra of
+the Pearson correlations in the table of Section 4. The 0.843 comes from a
+held-out Spearman correlation. The two numbers are close in meaning, but they
+are not the same measurement. Read the 0.629 as an estimate.
+
+### 7.2 Most Directions in the Subspace Read Nothing
+
+The subspace has four dimensions. The energy direction is only one of them.
+The other directions do something else.
+
+Look at the directions that get a correlation of exactly 0. These are the
+directions at a right angle to `r`. They make a flat space with three
+dimensions inside the four-dimensional subspace. Every direction in that flat
+space is inside the "energy subspace" and reads no energy at all.
+
+A direction taken at random in the subspace does not do well either. Its
+typical correlation is 0.31, which is the root mean square across random
+directions. That is half of what the best direction gets.
+
+Thus a subspace does not hold the energy in the way that a folder holds a
+file. The subspace holds one direction that reads the energy. It holds many
+more directions that do not. To keep the subspace is not enough. You must also
+find the correct direction in it.
+
+### 7.3 Two Cautions
+
+**The components were chosen by spread, not by energy.** PC1 to PC4 are the
+four components with the largest spread. The table of Section 4 puts them in
+the order of their correlation with the energy. This can look as if we chose
+these four because of the energy. We did not. A search through all 1280
+components for the four best correlated with the energy would probably find a
+different subspace, and a number larger than 0.629.
+
+**A UMAP map is not a subspace.** Section 6 gives the numbers 0.539 and 0.468
+for the UMAP maps. Do not apply the algebra of this section to those numbers.
+A subspace is linear, so we can calculate how much of the direction stays.
+UMAP is nonlinear, so we cannot. The two cases lose the direction for
+different reasons.
+
+## 8. Summary
 
 A feature does not need a dimension. A feature needs a direction. A single
 column is only the simplest direction. When the causes of variation mix into
@@ -178,4 +285,7 @@ the coordinates, no column shows the small cause, but a projection can cancel
 the large cause and recover the small one. The two-dimensional example shows
 the mechanism exactly. The 1280-dimensional embedding shows it at scale. The
 practical rules follow directly: do not trust one axis, do not trust a 2D
-picture, and test what a space knows with a probe, not with your eyes.
+picture, and test what a space knows with a probe, not with your eyes. A
+subspace is not a short cut past the last rule. A subspace holds many
+directions, and almost all of them read nothing. You must still find the
+correct one.
