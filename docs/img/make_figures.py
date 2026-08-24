@@ -97,4 +97,30 @@ ax.set_title("The 2D map keeps the large directions and drops the small one.",
              fontsize=10.5, color=INK, loc="left")
 fig.tight_layout()
 fig.savefig("fig3-map-loses-direction.svg", facecolor=SURF, bbox_inches="tight")
+
+# ---------- Figure 4: what a subspace holds ----------
+# r is the vector of the PC1..PC4 correlations with the energy (Section 4).
+# The PCs are mutually uncorrelated, so the best direction in their span
+# reaches |r|, and a random unit direction in that span reaches |r|/sqrt(4).
+r = np.array([0.403, 0.212, -0.276, 0.335])
+best_sub = float(np.linalg.norm(r))
+rand_sub = best_sub / np.sqrt(len(r))
+names = ["a random direction\nin the 4D subspace", "best single component\n(PC1)",
+         "best direction in\nspan{PC1...PC4}", "full direction w\n(all 1280 dims)"]
+vals = [rand_sub, 0.403, best_sub, 0.843]
+cols = [MUT, BLUE, RAMP[4], ORANGE]
+fig, ax = plt.subplots(figsize=(6.8, 3.2), facecolor=SURF)
+ax.set_facecolor(SURF); style(ax); ax.spines["left"].set_visible(False)
+bars = ax.barh(names, vals, height=0.6, color=cols, zorder=3)
+for bar, v in zip(bars, vals):
+    ax.text(v + 0.012, bar.get_y() + bar.get_height() / 2, f"{v:.3f}",
+            va="center", color=INK2, fontsize=9)
+ax.set_xlim(0, 0.98); ax.set_xlabel("correlation with the energy (absolute)")
+ax.xaxis.grid(True, color=GRID, lw=0.8, zorder=0)
+ax.set_axisbelow(True); ax.tick_params(left=False)
+ax.set_title("A subspace beats its best axis. It does not match the full space.",
+             fontsize=10.5, color=INK, loc="left")
+fig.tight_layout()
+fig.savefig("fig4-subspace-ladder.svg", facecolor=SURF, bbox_inches="tight")
+
 print("done")
