@@ -193,7 +193,27 @@ same result.
 This test shows that Method 1 does not give too much energy to one music type. Use this
 test when you must examine a group of tracks.
 
-## 8. What Is Still Open
+## 8. A Second Fault: Regularity Is Not Energy
+
+The first version of the scale had a value with the name `pump`. It measured the
+strength of the energy envelope at the beat frequency. We thought that this shows
+power. But it shows only that the beat is regular.
+
+This gave incorrect results. Minimal techno keeps a constant beat. Thus it got a very
+high value. One such track got a value of 1440. The median of the library is 128. That
+track then became number 1 in the full library.
+
+But hard techno and riddim change their rhythm. They also use distortion. These two
+things make the envelope less regular. Thus these tracks got a value between the 1st
+and the 21st percentile. But a listener hears them as much more powerful.
+
+We removed `pump`. The harder tracks then moved above the minimal techno track. The
+other tests did not become worse. The correlation with the tempo is now +0.018.
+
+Keep this rule: a value must measure the power of the sound. It must not measure the
+regularity of the sound.
+
+## 9. What Is Still Open
 
 The order of the tracks in each music type is correct. In drum-and-bass, the quiet
 tracks get a low value and the loud tracks get a high value. In disco, the result is

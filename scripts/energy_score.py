@@ -30,7 +30,14 @@ args = ap.parse_args()
 COMPONENTS = {
     # DRIVE: how busy / how much movement
     "onsets_per_beat": (+1, "drive"),   # rhythmic density, tempo-normalised
-    "pump":            (+1, "drive"),   # beat-locked envelope modulation
+    # pump REMOVED 2026-08-23. It measured the strength of the energy envelope AT
+    # THE BEAT FREQUENCY, which is metronomic REGULARITY, not energy. Minimal and
+    # hypnotic techno is perfectly regular and scored enormously (one such track
+    # hit 1440 against a library median of 128, and took rank 1 of the whole
+    # library on that alone). Hard techno, hardstyle and riddim syncopate and
+    # distort, which smears the envelope, so they scored in the 1st-21st
+    # percentile despite being far harder. Dropping it puts Billx and
+    # Klangkuenstler above the hypnotic track, which matches listening.
     # flux_p90 REMOVED 2026-08-23: it measures peakiness, not intensity —
     # correlates +0.528 with dyn_range and +0.408 with crest, both of which carry
     # a NEGATIVE sign here, so at +1 it actively fought the blend (it ended up
@@ -114,6 +121,50 @@ def deciles(s):
     o = np.argsort(s, kind="mergesort"); r = np.empty(len(s)); r[o] = np.arange(len(s))
     pct = (r + 0.5)/len(s)
     return np.minimum((pct*10).astype(int)+1, 10), pct
+
+
+# ---------------------------------------------------------------------------
+# ABSOLUTE scale (--absolute). The percentile scale above is purely RELATIVE:
+# the top track sits at 1.0000 by construction, whatever it sounds like, and
+# importing new music reshuffles every existing decile. That gives no headroom
+# for harder material than the library happens to contain.
+#
+# These anchors map each feature to [0,1] against FIXED reference points, not
+# library statistics. Where a feature has a physical bound, the anchor uses it:
+#   sustain   fraction of frames at full level -> <= 1 by definition
+#   crest     p99/p50                          -> >= 1 by definition
+#   dyn_range log10(p90/p10)                   -> >= 0 by definition
+#   r_*       band shares                      -> <= 1 by definition
+#   ml_*      model outputs                    -> already [0,1]
+# Consequence: scores are stable across imports, and the library's hardest track
+# lands wherever it lands rather than being forced to the ceiling.
+# (lo, hi) — hi is the "maximum energy" end, so lo>hi means lower is harder.
+ANCHORS = {
+    "onsets_per_beat": (0.5, 6.0),
+    "pump":            (0.0, 3000.0),
+    "r_bass":          (0.0, 0.40),
+    "r_sub":           (0.0, 0.50),
+    "r_hi":            (0.0, 0.15),
+    "sustain":         (0.0, 1.0),
+    "crest":           (8.0, 1.0),     # inverted: 1.0 = perfectly constant
+    "dyn_range":       (3.0, 0.0),     # inverted: 0 = no dynamic range
+    "ml_aggressive":   (0.0, 1.0),
+    "ml_party":        (0.0, 1.0),
+    "ml_energy":       (0.0, 1.0),
+    "ml_relaxed":      (1.0, 0.0),     # inverted
+}
+
+def absolute_score(ids, need, X):
+    """Energy on a fixed 0-10 scale with headroom. 10 = every component maxed."""
+    gsum, gcnt = {}, {}
+    for k, n in enumerate(need):
+        lo, hi = ANCHORS[n]
+        u = np.clip((X[:, k] - lo) / (hi - lo), 0.0, 1.0)
+        g = COMPONENTS[n][1]
+        gsum[g] = gsum.get(g, 0) + u
+        gcnt[g] = gcnt.get(g, 0) + 1
+    gav = {g: gsum[g] / gcnt[g] for g in gsum}
+    return 10.0 * sum(GROUP_W[g] * gav[g] for g in GROUP_W), gav
 
 if __name__ == "__main__":
     ids, need, X = load()
