@@ -86,7 +86,21 @@ Robust-z (median/IQR, clipped +-4) each feature, apply its sign, pool into four 
 essentia features all move together, so at a nominal 0.25 the `percept` group exerted
 +0.756 influence on the final score.
 
-### 3. Rank
+### 3. Calibration (`energy_calibration.json`) — REGENERATE AFTER ANY FORMULA CHANGE
+`--recalibrate` freezes the per-feature median/IQR, the group-norm params, and the
+decile thresholds. Scoring then uses those fixed numbers, so **importing tracks no
+longer reshuffles existing scores**. Measured: rescoring a random half of the library
+gives 100% identical deciles frozen, vs 39.6% in relative mode.
+
+The thresholds map today's library to deciles **1-8**, leaving 9-10 as headroom for
+material harder than anything currently owned (~4% currently spills into 9-10, which
+is accepted — some tracks genuinely are that hard).
+
+`load_cal()` refuses a STALE file (one whose component set no longer matches
+`COMPONENTS`) and falls back to relative mode with a warning. So after editing
+`COMPONENTS` or `GROUP_W` you MUST re-run `--recalibrate`.
+
+### 4. Rank
 Scoring and ranking are deliberately separate. The stored value is a **continuous
 score**, so deciles are computed over whatever set is asked for — the whole library
 (`--all`) or a single playlist (`--playlist NAME`). Same numbers, different denominator.

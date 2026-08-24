@@ -15,12 +15,13 @@ Usage:
   energy_score.py --all                 # library-wide deciles
   energy_score.py --playlist "psy/energy-sets/hi"
 """
-import sqlite3, argparse, os, numpy as np
+import sqlite3, argparse, os, json, numpy as np
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
 ap.add_argument("--validate", action="store_true")
+ap.add_argument("--recalibrate", action="store_true", help="refreeze energy_calibration.json from the current library")
 ap.add_argument("--all", action="store_true")
 ap.add_argument("--playlist", default=None)
 ap.add_argument("--top", type=int, default=10)
@@ -98,13 +99,33 @@ def load():
     X = np.column_stack([[f[i][k] for i in ids] for k in need])
     return ids, need, X
 
-def robust_z(v):
-    """median/IQR z — heavy tails (pump, crest) shouldn't dominate."""
-    med = np.median(v); iqr = np.percentile(v,75) - np.percentile(v,25)
+CAL_PATH = os.path.join(HERE, "energy_calibration.json")
+
+def robust_z(v, med=None, iqr=None):
+    """median/IQR z — heavy tails (crest, band shares) shouldn't dominate.
+    Pass frozen med/iqr to keep scores stable when the library grows."""
+    if med is None: med = np.median(v)
+    if iqr is None: iqr = np.percentile(v,75) - np.percentile(v,25)
     return np.clip((v - med) / (iqr + 1e-12), -4, 4)
 
-def score_of(ids, need, X):
-    Z = np.column_stack([robust_z(X[:,k]) * COMPONENTS[n][0] for k,n in enumerate(need)])
+def load_cal():
+    """Frozen calibration, or None. Stale files (component set changed) are refused."""
+    if not os.path.exists(CAL_PATH): return None
+    cal = json.load(open(CAL_PATH))
+    if set(cal.get("features", {})) != set(COMPONENTS):
+        print(f"WARNING: {os.path.basename(CAL_PATH)} is STALE "
+              f"(calibrated on {sorted(set(cal.get('features',{})) ^ set(COMPONENTS))} mismatch). "
+              f"Ignoring it — re-run with --recalibrate.")
+        return None
+    return cal
+
+def score_of(ids, need, X, cal=None):
+    if cal:
+        Z = np.column_stack([robust_z(X[:,k], cal["features"][n]["median"],
+                                      cal["features"][n]["iqr"]) * COMPONENTS[n][0]
+                             for k,n in enumerate(need)])
+    else:
+        Z = np.column_stack([robust_z(X[:,k]) * COMPONENTS[n][0] for k,n in enumerate(need)])
     gs = {}
     for g in GROUP_W:
         cols = [k for k,n in enumerate(need) if COMPONENTS[n][1]==g]
@@ -113,14 +134,39 @@ def score_of(ids, need, X):
         # mood models all move together) carry far more variance than their
         # nominal weight, and quietly dominate. Measured: percept correlated
         # +0.756 with the final score at a nominal weight of 0.25.
-        gs[g] = robust_z(Z[:,cols].mean(1))
+        gm = Z[:,cols].mean(1)
+        if cal: gs[g] = robust_z(gm, cal["group_norm"][g]["median"], cal["group_norm"][g]["iqr"])
+        else:   gs[g] = robust_z(gm)
     s = sum(GROUP_W[g]*gs[g] for g in GROUP_W)
     return s, gs, Z
 
-def deciles(s):
+def deciles(s, cal=None):
     o = np.argsort(s, kind="mergesort"); r = np.empty(len(s)); r[o] = np.arange(len(s))
     pct = (r + 0.5)/len(s)
+    if cal:   # fixed thresholds: today's library spans 1-8, 9-10 kept for harder music
+        return np.digitize(s, cal["thresholds"]) + 1, pct
     return np.minimum((pct*10).astype(int)+1, 10), pct
+
+def write_cal(need, X, s, gs):
+    cal = {"features": {}, "group_norm": {}, "groups": GROUP_W,
+           "signs": {n: COMPONENTS[n][0] for n in need}}
+    for k, n in enumerate(need):
+        v = X[:,k]
+        cal["features"][n] = {"median": float(np.median(v)),
+                              "iqr": float(np.percentile(v,75)-np.percentile(v,25))}
+    for g in GROUP_W:
+        cal["group_norm"][g] = {"median": float(np.median(gs[g])),
+                                "iqr": float(np.percentile(gs[g],75)-np.percentile(gs[g],25))}
+    th = [float(np.percentile(s, 100*i/8)) for i in range(1,8)]   # library spans deciles 1-8
+    band = th[-1]-th[-2]
+    th += [float(th[-1]+band), float(th[-1]+2*band)]              # 9 and 10 above the library
+    cal["thresholds"] = th
+    cal["note"] = ("Frozen calibration. Scores use these fixed medians/IQRs, so importing "
+                   "tracks does NOT reshuffle existing scores. Today's library spans deciles "
+                   "1-8; 9 and 10 are headroom for harder material. Regenerate with "
+                   "--recalibrate after ANY change to COMPONENTS or GROUP_W.")
+    json.dump(cal, open(CAL_PATH,"w"), indent=1)
+    return cal
 
 
 # ---------------------------------------------------------------------------
@@ -168,9 +214,13 @@ def absolute_score(ids, need, X):
 
 if __name__ == "__main__":
     ids, need, X = load()
-    s, gs, Z = score_of(ids, need, X)
-    dec, pct = deciles(s)
-    print(f"scored {len(ids)} tracks")
+    cal = None if args.recalibrate else load_cal()
+    s, gs, Z = score_of(ids, need, X, cal)
+    if args.recalibrate:
+        cal = write_cal(need, X, s, gs)
+        print(f"recalibrated -> {os.path.basename(CAL_PATH)} ({len(need)} components)")
+    dec, pct = deciles(s, cal)
+    print(f"scored {len(ids)} tracks   calibration: {'frozen' if cal else 'NONE (relative)'}")
     if args.validate:
         print("\ncorrelation of each component with the FINAL score "
               "(no single one should dominate):")
